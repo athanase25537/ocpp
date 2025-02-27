@@ -22,23 +22,23 @@ logging.basicConfig(level=logging.INFO)
 
 
 class ChargePoint(cp):
-    @on(Action.boot_notification)
+    @on(Action.BootNotification)
     def on_boot_notification(
         self, charge_point_vendor: str, charge_point_model: str, **kwargs
     ):
-        return call_result.BootNotification(
+        return call_result.BootNotificationPayload(
             current_time=datetime.now(timezone.utc).isoformat(),
             interval=10,
             status=RegistrationStatus.accepted,
         )
 
 
-async def on_connect(websocket):
+async def on_connect(websocket, path):
     """For every new charge point that connects, create a ChargePoint
     instance and start listening for messages.
     """
     try:
-        requested_protocols = websocket.request.headers["Sec-WebSocket-Protocol"]
+        requested_protocols = websocket.request_headers["Sec-WebSocket-Protocol"]
     except KeyError:
         logging.error("Client hasn't requested any Subprotocol. Closing Connection")
         return await websocket.close()
@@ -56,7 +56,7 @@ async def on_connect(websocket):
         )
         return await websocket.close()
 
-    charge_point_id = websocket.request.path.strip("/")
+    charge_point_id = path.strip("/")
     cp = ChargePoint(charge_point_id, websocket)
 
     await cp.start()
